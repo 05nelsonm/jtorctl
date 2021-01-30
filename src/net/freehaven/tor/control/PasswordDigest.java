@@ -2,6 +2,8 @@
 // See LICENSE file for copying information
 package net.freehaven.tor.control;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -14,8 +16,8 @@ import java.security.SecureRandom;
  */
 public class PasswordDigest {
 
-    private final byte[] secret;
-    private final String hashedKey;
+    @NotNull private final byte[] secret;
+    @NotNull private final String hashedKey;
 
     /** Return a new password digest with a random secret and salt. */
     public static PasswordDigest generateDigest() {
@@ -26,7 +28,7 @@ public class PasswordDigest {
     }
 
     /** Construct a new password digest with a given secret and random salt */
-    public PasswordDigest(byte[] secret) {
+    public PasswordDigest(@NotNull byte[] secret) {
         this(secret, null);
     }
 
@@ -34,7 +36,7 @@ public class PasswordDigest {
      * Note that the 9th byte of the specifier determines the number of hash
      * iterations as in RFC2440.
      */
-    public PasswordDigest(byte[] secret, byte[] specifier) {
+    public PasswordDigest(@NotNull byte[] secret, @Nullable byte[] specifier) {
         this.secret = secret.clone();
         if (specifier == null) {
             specifier = new byte[9];
@@ -47,12 +49,12 @@ public class PasswordDigest {
 
     /** Return the secret used to generate this password hash.
      */
-    public byte[] getSecret() {
+    public @NotNull byte[] getSecret() {
         return secret.clone();
     }
 
     /** Return the hashed password in the format used by Tor. */
-    public String getHashedPassword() {
+    public @NotNull String getHashedPassword() {
         return hashedKey;
     }
 
@@ -60,7 +62,7 @@ public class PasswordDigest {
     private static final int EXPBIAS = 6;
 
     /** Implement rfc2440 s2k */
-    public static byte[] secretToKey(byte[] secret, byte[] specifier) {
+    public static @NotNull byte[] secretToKey(@NotNull byte[] secret, @NotNull byte[] specifier) {
         MessageDigest d;
         try {
             d = MessageDigest.getInstance("SHA-1");
@@ -90,7 +92,7 @@ public class PasswordDigest {
 
     /** Return a hexadecimal encoding of a byte array. */
     // XXX There must be a better way to do this in Java.
-    private static final String encodeBytes(byte[] ba) {
+    private static final @NotNull String encodeBytes(@NotNull byte[] ba) {
         return Bytes.hex(ba);
     }
 

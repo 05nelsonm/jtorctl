@@ -1,6 +1,9 @@
 
 package net.freehaven.tor.control;
 
+
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Receive the raw event data.
  * <p>
@@ -45,5 +48,5 @@ public interface RawEventListener {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#asynchronous-events">Control Port Asynchronous events</a>
      */
-    public void onEvent(String keyword, String data);
+    public void onEvent(@NotNull String keyword, @NotNull  String data);
 }

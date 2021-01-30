@@ -2,6 +2,7 @@ package net.freehaven.tor.control;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.Assume;
 import org.junit.Before;
@@ -154,7 +155,7 @@ public class TorControlConnectionTest {
         final CountDownLatch hsDescLatch = new CountDownLatch(1);
         RawEventListener listener = new RawEventListener() {
             @Override
-            public void onEvent(String name, String data) {
+            public void onEvent(@NotNull String name, @NotNull String data) {
                 if (TorControlCommands.EVENT_HS_DESC.equals(name)) {
                     hsDescLatch.countDown();
                 }

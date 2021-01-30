@@ -2,6 +2,8 @@
 // See LICENSE file for copying information
 package net.freehaven.tor.control;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,16 +34,16 @@ import java.util.StringTokenizer;
  */
 public class TorControlConnection implements TorControlCommands {
 
-    private final LinkedList<Waiter> waiters;
-    private final BufferedReader input;
-    private final Writer output;
+    @NotNull private final LinkedList<Waiter> waiters;
+    @NotNull private final BufferedReader input;
+    @NotNull private final Writer output;
 
-    private ControlParseThread thread; // Locking: this
+    @Nullable private ControlParseThread thread; // Locking: this
 
     private final List<RawEventListener> rawEventListeners = new ArrayList<>(0);
-    private volatile EventHandler handler;
-    private volatile PrintWriter debugOutput;
-    private volatile IOException parseThreadException;
+    @Nullable private volatile EventHandler handler;
+    @Nullable private volatile PrintWriter debugOutput;
+    @Nullable private volatile IOException parseThreadException;
 
     static class Waiter {
 
@@ -71,11 +73,11 @@ public class TorControlConnection implements TorControlCommands {
 
     static class ReplyLine {
 
-        final String status;
-        final String msg;
-        final String rest;
+        @NotNull final String status;
+        @NotNull final String msg;
+        @Nullable final String rest;
 
-        ReplyLine(String status, String msg, String rest) {
+        ReplyLine(@NotNull String status, @NotNull String msg, @Nullable String rest) {
             this.status = status; this.msg = msg; this.rest = rest;
         }
     }
@@ -84,7 +86,7 @@ public class TorControlConnection implements TorControlCommands {
      * Create a new TorControlConnection to communicate with Tor over
      * a given socket.  After calling this constructor, it is typical to
      * call launchThread and authenticate. */
-    public TorControlConnection(Socket connection) throws IOException {
+    public TorControlConnection(@NotNull Socket connection) throws IOException {
         this(connection.getInputStream(), connection.getOutputStream());
     }
 
@@ -92,11 +94,11 @@ public class TorControlConnection implements TorControlCommands {
      * Create a new TorControlConnection to communicate with Tor over
      * an arbitrary pair of data streams.
      */
-    public TorControlConnection(InputStream i, OutputStream o) {
+    public TorControlConnection(@NotNull InputStream i, @NotNull OutputStream o) {
         this(new InputStreamReader(i), new OutputStreamWriter(o));
     }
 
-    public TorControlConnection(Reader i, Writer o) {
+    public TorControlConnection(@NotNull Reader i, @NotNull Writer o) {
         this.output = o;
         if (i instanceof BufferedReader)
             this.input = (BufferedReader) i;
@@ -105,7 +107,7 @@ public class TorControlConnection implements TorControlCommands {
         this.waiters = new LinkedList<Waiter>();
     }
 
-    protected final void writeEscaped(String s) throws IOException {
+    protected final void writeEscaped(@NotNull String s) throws IOException {
         StringTokenizer st = new StringTokenizer(s, "\n");
         while (st.hasMoreTokens()) {
             String line = st.nextToken();
@@ -124,7 +126,7 @@ public class TorControlConnection implements TorControlCommands {
             debugOutput.print(">> .\n");
     }
 
-    protected static final String quote(String s) {
+    protected static final @NotNull String quote(@NotNull String s) {
         StringBuffer sb = new StringBuffer("\"");
         for (int i = 0; i < s.length(); ++i) {
             char c = s.charAt(i);
@@ -142,7 +144,7 @@ public class TorControlConnection implements TorControlCommands {
         return sb.toString();
     }
 
-    protected final ArrayList<ReplyLine> readReply() throws IOException {
+    protected final @NotNull ArrayList<ReplyLine> readReply() throws IOException {
         ArrayList<ReplyLine> reply = new ArrayList<ReplyLine>();
         char c;
         do {
@@ -186,13 +188,16 @@ public class TorControlConnection implements TorControlCommands {
         return reply;
     }
 
-    protected synchronized List<ReplyLine> sendAndWaitForResponse(String s,
-        String rest) throws IOException {
+    protected synchronized @NotNull List<ReplyLine> sendAndWaitForResponse(
+            @NotNull String s,
+            @Nullable String rest
+    ) throws IOException {
         if (parseThreadException != null) throw parseThreadException;
         checkThread();
         Waiter w = new Waiter();
-        if (debugOutput != null)
+        if (debugOutput != null) {
             debugOutput.print(">> "+s);
+        }
         synchronized (waiters) {
             output.write(s);
             if (rest != null)
@@ -219,7 +224,9 @@ public class TorControlConnection implements TorControlCommands {
      * {@link EventHandler} is set, then decode the event arguments and send
      * call the {@code EventHandler} methods.
      */
-    protected void handleEvent(ArrayList<ReplyLine> events) throws UnsupportedOperationException {
+    protected void handleEvent(
+            @NotNull ArrayList<ReplyLine> events
+    ) throws UnsupportedOperationException {
         if (handler == null && rawEventListeners.isEmpty()) {
             return;
         }
@@ -309,7 +316,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #removeRawEventListener(RawEventListener)
      */
     @Deprecated
-    public void setEventHandler(EventHandler handler) {
+    public void setEventHandler(@Nullable EventHandler handler) {
         this.handler = handler;
     }
 
@@ -318,7 +325,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see #removeRawEventListener(RawEventListener)
      */
-    public void addRawEventListener(RawEventListener rawEventListener) {
+    public void addRawEventListener(@NotNull RawEventListener rawEventListener) {
         rawEventListeners.add(rawEventListener);
     }
 
@@ -327,7 +334,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see #addRawEventListener(RawEventListener)
      */
-    public void removeRawEventListener(RawEventListener rawEventListener) {
+    public void removeRawEventListener(@NotNull RawEventListener rawEventListener) {
         rawEventListeners.remove(rawEventListener);
     }
 
@@ -336,7 +343,7 @@ public class TorControlConnection implements TorControlCommands {
      * This is necessary to handle asynchronous events and synchronous
      * responses that arrive independantly over the same socket.
      */
-    public synchronized Thread launchThread(boolean daemon) {
+    public synchronized @NotNull Thread launchThread(boolean daemon) {
     	ControlParseThread th = new ControlParseThread();
         if (daemon)
             th.setDaemon(true);
@@ -400,7 +407,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#setconf">control-spec: SETCONF</a>
      */
-    public void setConf(String key, String value) throws IOException {
+    public void setConf(@NotNull String key, @NotNull String value) throws IOException {
         List<String> lst = new ArrayList<String>();
         lst.add(key+" "+value);
         setConf(lst);
@@ -411,7 +418,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#setconf">control-spec: SETCONF</a>
      */
-    public void setConf(Map<String, String> kvMap) throws IOException {
+    public void setConf(@NotNull Map<String, String> kvMap) throws IOException {
         List<String> lst = new ArrayList<String>();
         for (Iterator<Map.Entry<String,String>> it = kvMap.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String,String> ent = it.next();
@@ -443,7 +450,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#setconf">control-spec: SETCONF</a>
      */
-    public void setConf(Collection<String> kvList) throws IOException {
+    public void setConf(@NotNull Collection<String> kvList) throws IOException {
         if (kvList.size() == 0)
             return;
         StringBuffer b = new StringBuffer(SETCONF);
@@ -465,7 +472,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#resetconf">control-spec: RESETCONF</a>
      */
-    public void resetConf(Collection<String> keys) throws IOException {
+    public void resetConf(@NotNull Collection<String> keys) throws IOException {
         if (keys.size() == 0)
             return;
         StringBuffer b = new StringBuffer(RESETCONF);
@@ -482,7 +489,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#getconf">control-spec: GETCONF</a>
      */
-    public List<ConfigEntry> getConf(String key) throws IOException {
+    public @NotNull List<ConfigEntry> getConf(@NotNull String key) throws IOException {
         List<String> lst = new ArrayList<String>();
         lst.add(key);
         return getConf(lst);
@@ -503,7 +510,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#getconf">control-spec: GETCONF</a>
      */
-    public List<ConfigEntry> getConf(Collection<String> keys) throws IOException {
+    public @NotNull List<ConfigEntry> getConf(@NotNull Collection<String> keys) throws IOException {
         StringBuffer sb = new StringBuffer(GETCONF);
         for (Iterator<String> it = keys.iterator(); it.hasNext(); ) {
             String key = it.next();
@@ -527,14 +534,14 @@ public class TorControlConnection implements TorControlCommands {
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#loadconf">control-spec: LOADCONF</a>
      */
-    public void loadConf(String[] configLines) throws IOException {
+    public void loadConf(@NotNull String[] configLines) throws IOException {
         sendAndWaitForResponse(LOADCONF + "\r\n", String.join("\n", configLines));
     }
 
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#loadconf">control-spec: LOADCONF</a>
      */
-    public void loadConf(String config) throws IOException {
+    public void loadConf(@NotNull String config) throws IOException {
         sendAndWaitForResponse(LOADCONF + "\r\n", config);
     }
 
@@ -577,7 +584,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#setevents">control-spec: SETEVENTS</a>
      */
-    public void setEvents(List<String> events) throws IOException, IllegalArgumentException {
+    public void setEvents(@NotNull List<String> events) throws IOException, IllegalArgumentException {
         StringBuffer sb = new StringBuffer(SETEVENTS);
         String supportedEvents = Arrays.toString(EVENT_NAMES);
         for (Iterator<String> it = events.iterator(); it.hasNext(); ) {
@@ -615,7 +622,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#authenticate">control-spec: AUTHENTICATE</a>
      */
-    public void authenticate(byte[] auth) throws IOException {
+    public void authenticate(@NotNull byte[] auth) throws IOException {
         String cmd = AUTHENTICATE + " " + Bytes.hex(auth) + "\r\n";
         sendAndWaitForResponse(cmd, null);
     }
@@ -656,7 +663,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#signal">control-spec: SIGNAL</a>
      */
-    public void signal(String signal) throws IOException {
+    public void signal(@NotNull String signal) throws IOException {
         String cmd = SIGNAL + " " + signal + "\r\n";
         sendAndWaitForResponse(cmd, null);
     }
@@ -667,7 +674,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see #signal(String)
      */
-    public void shutdownTor(String signal) throws IOException {
+    public void shutdownTor(@NotNull String signal) throws IOException {
         String s = SIGNAL + " " + signal + "\r\n";
         Waiter w = new Waiter();
         if (debugOutput != null)
@@ -725,7 +732,9 @@ public class TorControlConnection implements TorControlCommands {
      * @see #mapAddress(String, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#mapaddress">control-spec: MAPADDRESS</a>
      */
-    public Map<String,String> mapAddresses(Collection<String> kvLines) throws IOException {
+    public @NotNull Map<String,String> mapAddresses(
+            @NotNull Collection<String> kvLines
+    ) throws IOException {
         StringBuffer sb = new StringBuffer(MAPADDRESS);
         for (Iterator<String> it = kvLines.iterator(); it.hasNext(); ) {
             String kv = it.next();
@@ -750,7 +759,9 @@ public class TorControlConnection implements TorControlCommands {
      * @see #mapAddress(String, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#mapaddress">control-spec: MAPADDRESS</a>
      */
-    public Map<String,String> mapAddresses(Map<String,String> addresses) throws IOException {
+    public @NotNull Map<String,String> mapAddresses(
+            @NotNull Map<String,String> addresses
+    ) throws IOException {
         List<String> kvList = new ArrayList<String>();
         for (Iterator<Map.Entry<String, String>> it = addresses.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String,String> e = it.next();
@@ -764,7 +775,10 @@ public class TorControlConnection implements TorControlCommands {
      * @see #mapAddresses(Map)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#mapaddress">control-spec: MAPADDRESS</a>
      */
-    public String mapAddress(String fromAddr, String toAddr) throws IOException {
+    public @NotNull String mapAddress(
+            @NotNull String fromAddr,
+            @NotNull String toAddr
+    ) throws IOException {
         List<String> lst = new ArrayList<String>();
         lst.add(fromAddr+" "+toAddr+"\n");
         Map<String,String> m = mapAddresses(lst);
@@ -805,7 +819,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #getInfo(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#getinfo">control-spec: GETINFO</a>
      */
-    public Map<String,String> getInfo(Collection<String> keys) throws IOException {
+    public @NotNull Map<String,String> getInfo(@NotNull Collection<String> keys) throws IOException {
         StringBuffer sb = new StringBuffer(GETINFO);
         for (Iterator<String> it = keys.iterator(); it.hasNext(); ) {
             sb.append(" ").append(it.next());
@@ -836,7 +850,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #getInfo(Collection)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#getinfo">control-spec: GETINFO</a>
      */
-    public String getInfo(String key) throws IOException {
+    public @NotNull String getInfo(@NotNull String key) throws IOException {
         List<String> lst = new ArrayList<String>();
         lst.add(key);
         Map<String,String> m = getInfo(lst);
@@ -854,7 +868,10 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#extendcircuit">control-spec: EXTENDCIRCUIT</a>
      */
-    public String extendCircuit(String circID, String path) throws IOException {
+    public @NotNull String extendCircuit(
+            @NotNull String circID,
+            @NotNull String path
+    ) throws IOException {
         List<ReplyLine> lst = sendAndWaitForResponse(
                 EXTENDCIRCUIT + " " + circID + " " + path + "\r\n", null);
         return (lst.get(0)).msg;
@@ -863,7 +880,10 @@ public class TorControlConnection implements TorControlCommands {
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#setcircuitpurpose">control-spec: SETCIRCUITPURPOSE</a>
      */
-    public void setCircuitPurpose(String circuitID, String purpose) throws IOException {
+    public void setCircuitPurpose(
+            @NotNull String circuitID,
+            @NotNull String purpose
+    ) throws IOException {
         sendAndWaitForResponse(SETCIRCUITPURPOSE + " " + circuitID + " " + purpose + "\r\n", null);
     }
 
@@ -871,7 +891,10 @@ public class TorControlConnection implements TorControlCommands {
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#setrouterpurpose">control-spec: SETROUTERPURPOSE</a>
      */
     @Deprecated
-    public void setRouterPurpose(String nicknameOrKey, String purpose) throws IOException {
+    public void setRouterPurpose(
+            @NotNull String nicknameOrKey,
+            @NotNull String purpose
+    ) throws IOException {
         sendAndWaitForResponse(SETROUTERPURPOSE + " " + nicknameOrKey + " " + purpose + "\r\n", null);
     }
 
@@ -896,8 +919,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#attachstream">control-spec: ATTACHSTREAM</a>
      */
-    public void attachStream(String streamID, String circID)
-            throws IOException {
+    public void attachStream(@NotNull String streamID, @NotNull String circID) throws IOException {
         sendAndWaitForResponse(ATTACHSTREAM + " " + streamID + " " + circID + "\r\n", null);
     }
 
@@ -912,7 +934,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #postDescriptor(String, boolean, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#postdescriptor">control-spec: POSTDESCRIPTOR</a>
      */
-    public String postDescriptor(String desc) throws IOException {
+    public @NotNull String postDescriptor(@NotNull String desc) throws IOException {
         List<ReplyLine> lst = sendAndWaitForResponse(POSTDESCRIPTOR + "\r\n", desc);
         return (lst.get(0)).msg;
     }
@@ -923,7 +945,10 @@ public class TorControlConnection implements TorControlCommands {
      * @see #postDescriptor(String, boolean, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#postdescriptor">control-spec: POSTDESCRIPTOR</a>
      */
-    public String postDescriptor(String purpose, String descriptor) throws IOException {
+    public @NotNull String postDescriptor(
+            @NotNull String purpose,
+            @NotNull String descriptor
+    ) throws IOException {
         purpose = "purpose=" + purpose;
         List<ReplyLine> lst = sendAndWaitForResponse(POSTDESCRIPTOR + " " + purpose + "\r\n", descriptor);
         return (lst.get(0)).msg;
@@ -935,7 +960,10 @@ public class TorControlConnection implements TorControlCommands {
      * @see #postDescriptor(String, boolean, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#postdescriptor">control-spec: POSTDESCRIPTOR</a>
      */
-    public String postDescriptor(boolean cache, String descriptor) throws IOException {
+    public @NotNull String postDescriptor(
+            boolean cache,
+            @NotNull String descriptor
+    ) throws IOException {
         return postDescriptor(null, cache, descriptor);
     }
 
@@ -945,7 +973,11 @@ public class TorControlConnection implements TorControlCommands {
      * @see #postDescriptor(boolean, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#postdescriptor">control-spec: POSTDESCRIPTOR</a>
      */
-    public String postDescriptor(String purpose, boolean cache, String descriptor) throws IOException {
+    public @NotNull String postDescriptor(
+            @Nullable String purpose,
+            boolean cache,
+            @NotNull String descriptor
+    ) throws IOException {
         if (purpose == null || purpose.length() < 1) {
             purpose = "";
         } else {
@@ -970,7 +1002,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#redirectstream">control-spec: REDIRECTSTREAM</a>
      */
-    public void redirectStream(String streamID, String address) throws IOException {
+    public void redirectStream(@NotNull String streamID, @NotNull String address) throws IOException {
         sendAndWaitForResponse(REDIRECTSTREAM + " " + streamID + " " + address + "\r\n", null);
     }
 
@@ -997,8 +1029,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#closestream">control-spec: CLOSESTREAM</a>
      */
-    public void closeStream(String streamID, byte reason)
-        throws IOException {
+    public void closeStream(@NotNull String streamID, byte reason) throws IOException {
         sendAndWaitForResponse(CLOSESTREAM + " " + streamID + " " + reason + "\r\n", null);
     }
 
@@ -1008,7 +1039,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#closecircuit">control-spec: CLOSECIRCUIT</a>
      */
-    public void closeCircuit(String circID, boolean ifUnused) throws IOException {
+    public void closeCircuit(@NotNull String circID, boolean ifUnused) throws IOException {
         sendAndWaitForResponse(CLOSECIRCUIT + " " + circID +
                                (ifUnused?" IFUNUSED":"")+"\r\n", null);
     }
@@ -1017,7 +1048,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #useFeature(Collection)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#usefeature">control-spec: USEFEATURE</a>
      */
-    public void useFeature(String key) throws IOException {
+    public void useFeature(@NotNull String key) throws IOException {
         sendAndWaitForResponse(USEFEATURE + " " + key + "\r\n", null);
     }
 
@@ -1025,7 +1056,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #useFeature(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#usefeature">control-spec: USEFEATURE</a>
      */
-    public void useFeature(Collection<String> keys) throws IOException {
+    public void useFeature(@NotNull Collection<String> keys) throws IOException {
         if (keys.size() == 0) {
             return;
         }
@@ -1042,7 +1073,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #resolve(String, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#resolve">control-spec: RESOLVE</a>
      */
-    public void resolve(String hostname) throws IOException {
+    public void resolve(@NotNull String hostname) throws IOException {
         resolve(hostname, false);
     }
 
@@ -1051,7 +1082,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #resolve(String, String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#resolve">control-spec: RESOLVE</a>
      */
-    public void resolve(String hostname, boolean reverseLookup) throws IOException {
+    public void resolve(@NotNull String hostname, boolean reverseLookup) throws IOException {
         if (reverseLookup) {
             resolve("mode=reverse", hostname);
         } else {
@@ -1064,7 +1095,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #resolve(String, boolean)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#resolve">control-spec: RESOLVE</a>
      */
-    public void resolve(String option, String address) throws IOException {
+    public void resolve(@NotNull String option, @NotNull String address) throws IOException {
         sendAndWaitForResponse(RESOLVE + " " + option + " " + address + "\r\n", null);
     }
 
@@ -1072,7 +1103,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #protocolInfo(Collection)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#protocolinfo">control-spec: PROTOCOLINFO</a>
      */
-    public void protocolInfo(String key) throws IOException {
+    public void protocolInfo(@NotNull String key) throws IOException {
         sendAndWaitForResponse(PROTOCOLINFO + " " + key + "\r\n", null);
     }
 
@@ -1080,7 +1111,7 @@ public class TorControlConnection implements TorControlCommands {
      * @see #protocolInfo(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#protocolinfo">control-spec: PROTOCOLINFO</a>
      */
-    public void protocolInfo(Collection<String> keys) throws IOException {
+    public void protocolInfo(@NotNull Collection<String> keys) throws IOException {
         if (keys.size() == 0) {
             return;
         }
@@ -1095,7 +1126,9 @@ public class TorControlConnection implements TorControlCommands {
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#authchallenge">control-spec: AUTHCHALLENGE</a>
      */
-    public Map<String, String> authChallenge(String clientNonce) throws IOException {
+    public @NotNull Map<String, String> authChallenge(
+            @NotNull String clientNonce
+    ) throws IOException {
         List<ReplyLine> lst = sendAndWaitForResponse(AUTHCHALLENGE + " SAFECOOKIE " + clientNonce + "\r\n", null);
         Map<String, String> ret = new HashMap<String, String>();
         for (ReplyLine line : lst) {
@@ -1115,19 +1148,19 @@ public class TorControlConnection implements TorControlCommands {
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hsfetch">control-spec: HSFETCH</a>
      */
-    public void hsFetch(String address) throws IOException {
+    public void hsFetch(@NotNull String address) throws IOException {
         sendAndWaitForResponse(HSFETCH + " " + address + "\r\n", null);
     }
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hsfetch">control-spec: HSFETCH</a>
      */
-    public void hsFetch(String address, String server) throws IOException {
+    public void hsFetch(@NotNull String address, @NotNull String server) throws IOException {
         hsFetch(address, Collections.singletonList(server));
     }
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hsfetch">control-spec: HSFETCH</a>
      */
-    public void hsFetch(String address, List<String> servers) throws IOException {
+    public void hsFetch(@NotNull String address, @Nullable List<String> servers) throws IOException {
         StringBuffer b = new StringBuffer(HSFETCH);
         b.append(' ').append(address);
         if (servers != null) {
@@ -1144,28 +1177,32 @@ public class TorControlConnection implements TorControlCommands {
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hspost">control-spec: HSPOST</a>
      */
-    public void hsPost(String descriptor) throws IOException {
+    public void hsPost(@NotNull String descriptor) throws IOException {
         hsPost(null, null, descriptor);
     }
 
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hspost">control-spec: HSPOST</a>
      */
-    public void hsPost(String server, String descriptor) throws IOException {
+    public void hsPost(@NotNull String server, @NotNull String descriptor) throws IOException {
         hsPost(Collections.singletonList(server), null, descriptor);
     }
 
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hspost">control-spec: HSPOST</a>
      */
-    public void hsPost(List<String> servers, String descriptor) throws IOException {
+    public void hsPost(@NotNull List<String> servers, @NotNull String descriptor) throws IOException {
         hsPost(servers, null, descriptor);
     }
 
     /**
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#hspost">control-spec: HSPOST</a>
      */
-    public void hsPost(List<String> servers, String hsAddress, String descriptor) throws IOException {
+    public void hsPost(
+            @Nullable List<String> servers,
+            @Nullable String hsAddress,
+            @NotNull String descriptor
+    ) throws IOException {
         StringBuffer b = new StringBuffer(HSPOST);
         if (servers != null) {
             for (String server : servers) {
@@ -1194,8 +1231,9 @@ public class TorControlConnection implements TorControlCommands {
      * @see #delOnion(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#add_onion">control-spec: ADD_ONION</a>
      */
-    public Map<String,String> addOnion(Map<Integer,String> portLines)
-                                       throws IOException {
+    public @NotNull Map<String,String> addOnion(
+            @NotNull Map<Integer,String> portLines
+    ) throws IOException {
         return addOnion("NEW:BEST", portLines, null);
     }
 
@@ -1212,9 +1250,11 @@ public class TorControlConnection implements TorControlCommands {
      * @see #delOnion(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#add_onion">control-spec: ADD_ONION</a>
      */
-    public Map<String,String> addOnion(Map<Integer,String> portLines,
-                                       boolean ephemeral, boolean detach)
-                                       throws IOException {
+    public @NotNull Map<String,String> addOnion(
+            @NotNull Map<Integer,String> portLines,
+            boolean ephemeral,
+            boolean detach
+    ) throws IOException {
         return addOnion("NEW:BEST", portLines, ephemeral, detach);
     }
 
@@ -1230,9 +1270,10 @@ public class TorControlConnection implements TorControlCommands {
      * @see #delOnion(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#add_onion">control-spec: ADD_ONION</a>
      */
-    public Map<String,String> addOnion(String privKey,
-                                       Map<Integer,String> portLines)
-                                       throws IOException {
+    public @NotNull Map<String,String> addOnion(
+            @NotNull String privKey,
+            @NotNull Map<Integer,String> portLines
+    ) throws IOException {
         return addOnion(privKey, portLines, null);
     }
 
@@ -1248,10 +1289,12 @@ public class TorControlConnection implements TorControlCommands {
      * @see #delOnion(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#add_onion">control-spec: ADD_ONION</a>
      */
-    public Map<String,String> addOnion(String privKey,
-                                       Map<Integer,String> portLines,
-                                       boolean ephemeral, boolean detach)
-                                       throws IOException {
+    public @NotNull Map<String,String> addOnion(
+            @NotNull String privKey,
+            @NotNull Map<Integer,String> portLines,
+            boolean ephemeral,
+            boolean detach
+    ) throws IOException {
         List<String> flags = new ArrayList<String>();
         if (ephemeral)
             flags.add("DiscardPK");
@@ -1272,13 +1315,14 @@ public class TorControlConnection implements TorControlCommands {
      * @see #delOnion(String)
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#add_onion">control-spec: ADD_ONION</a>
      */
-    public Map<String,String> addOnion(String privKey,
-                                       Map<Integer,String> portLines,
-                                       List<String> flags)
-                                       throws IOException {
+    public @NotNull Map<String,String> addOnion(
+            @NotNull String privKey,
+            @NotNull Map<Integer,String> portLines,
+            @Nullable List<String> flags
+    ) throws IOException {
         if (privKey.indexOf(':') < 0)
             throw new IllegalArgumentException("Invalid privKey");
-        if (portLines == null || portLines.size() < 1)
+        if (portLines.size() < 1)
             throw new IllegalArgumentException("Must provide at least one port line");
         StringBuilder b = new StringBuilder();
         b.append(ADD_ONION).append(" ").append(privKey);
@@ -1314,7 +1358,7 @@ public class TorControlConnection implements TorControlCommands {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#del_onion">control-spec: DEL_ONION</a>
      */
-    public void delOnion(String hostname) throws IOException {
+    public void delOnion(@NotNull String hostname) throws IOException {
         sendAndWaitForResponse(DEL_ONION + " " + hostname + "\r\n", null);
     }
 }

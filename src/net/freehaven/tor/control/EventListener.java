@@ -1,6 +1,8 @@
 
 package net.freehaven.tor.control;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Receive the events from Tor.
  * <p>
@@ -45,7 +47,7 @@ public abstract class EventListener implements RawEventListener {
      *
      * @see <a href="https://torproject.gitlab.io/torspec/control-spec/#asynchronous-events">Control Port Asynchronous events</a>
      */
-    public void onEvent(String keyword, String data) {
+    public void onEvent(@NotNull String keyword, @NotNull String data) {
         switch(keyword) {
             case TorControlCommands.EVENT_CIRCUIT_STATUS:
                 circuitStatus(data);
@@ -145,68 +147,68 @@ public abstract class EventListener implements RawEventListener {
         }
     }
 
-    public abstract void circuitStatus(String data);
+    public abstract void circuitStatus(@NotNull String data);
 
-    public abstract void circuitStatusMinor(String data);
+    public abstract void circuitStatusMinor(@NotNull String data);
 
-    public abstract void streamStatus(String data);
+    public abstract void streamStatus(@NotNull String data);
 
-    public abstract void orConnStatus(String data);
+    public abstract void orConnStatus(@NotNull String data);
 
-    public abstract void bandwidthUsed(String data);
+    public abstract void bandwidthUsed(@NotNull String data);
 
-    public abstract void debugMsg(String data);
+    public abstract void debugMsg(@NotNull String data);
 
-    public abstract void infoMsg(String data);
+    public abstract void infoMsg(@NotNull String data);
 
-    public abstract void noticeMsg(String data);
+    public abstract void noticeMsg(@NotNull String data);
 
-    public abstract void warnMsg(String data);
+    public abstract void warnMsg(@NotNull String data);
 
-    public abstract void errMsg(String data);
+    public abstract void errMsg(@NotNull String data);
 
-    public abstract void newDesc(String data);
+    public abstract void newDesc(@NotNull String data);
 
-    public abstract void addrMap(String data);
+    public abstract void addrMap(@NotNull String data);
 
-    public abstract void descChanged(String data);
+    public abstract void descChanged(@NotNull String data);
 
-    public abstract void ns(String data);
+    public abstract void ns(@NotNull String data);
 
-    public abstract void statusGeneral(String data);
+    public abstract void statusGeneral(@NotNull String data);
 
-    public abstract void statusClient(String data);
+    public abstract void statusClient(@NotNull String data);
 
-    public abstract void statusServer(String data);
+    public abstract void statusServer(@NotNull String data);
 
-    public abstract void guard(String data);
+    public abstract void guard(@NotNull String data);
 
-    public abstract void streamBandwidthUsed(String data);
+    public abstract void streamBandwidthUsed(@NotNull String data);
 
-    public abstract void clientsSeen(String data);
+    public abstract void clientsSeen(@NotNull String data);
 
-//    public abstract void newConsensus(String data);
+//    public abstract void newConsensus(@NotNull String data);
 
-    public abstract void buildTimeoutSet(String data);
+    public abstract void buildTimeoutSet(@NotNull String data);
 
-    public abstract void gotSignal(String data);
+    public abstract void gotSignal(@NotNull String data);
 
-    public abstract void confChanged(String data);
+    public abstract void confChanged(@NotNull String data);
 
-    public abstract void connBw(String data);
+    public abstract void connBw(@NotNull String data);
 
-    public abstract void cellStats(String data);
+    public abstract void cellStats(@NotNull String data);
 
-    public abstract void circBandwidthUsed(String data);
+    public abstract void circBandwidthUsed(@NotNull String data);
 
-    public abstract void transportLaunched(String data);
+    public abstract void transportLaunched(@NotNull String data);
 
-    public abstract void hsDesc(String data);
+    public abstract void hsDesc(@NotNull String data);
 
-//    public abstract void hsDescContent(String data);
+//    public abstract void hsDescContent(@NotNull String data);
 
-    public abstract void networkLiveness(String data);
+    public abstract void networkLiveness(@NotNull String data);
 
-    public abstract void unrecognized(String data);
+    public abstract void unrecognized(@NotNull String data);
 
 }
